@@ -17,6 +17,10 @@ celery_app = Celery(
     "support_triage",
     broker=settings.celery_broker,
     backend=settings.celery_backend,
+    include=[
+        "app.workers.tasks.triage",
+        "app.workers.tasks.notifications",
+    ],
 )
 
 celery_app.conf.update(
@@ -53,7 +57,3 @@ celery_app.conf.update(
         },
     },
 )
-
-celery_app.autodiscover_tasks([
-    "app.workers.tasks",
-])

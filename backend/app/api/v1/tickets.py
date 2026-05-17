@@ -49,9 +49,13 @@ async def create_ticket(
 
     # Enqueue AI triage as background task (best-effort)
     try:
-        from app.workers.tasks.triage import process_ticket_triage
+        from app.workers.celery_app import celery_app as _celery
 
-        task = process_ticket_triage.delay(str(ticket.id))
+        task = _celery.send_task(
+            "app.workers.tasks.triage.process_ticket_triage",
+            args=[str(ticket.id)],
+            queue="triage",
+        )
         repo = TicketRepository(db)
         await repo.update(ticket.id, triage_task_id=task.id)
     except Exception:
