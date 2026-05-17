@@ -40,7 +40,7 @@ class RealtimeService:
         })
         await redis.publish(channel, payload)
         await redis.publish(RealtimeService.CHANNEL_GLOBAL, payload)
-        logger.debug("Published ticket update", ticket_id=str(ticket_id), event=event_type)
+        logger.debug("Published ticket update", ticket_id=str(ticket_id), event_type=event_type)
 
     @staticmethod
     async def publish_notification(
