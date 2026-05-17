@@ -44,7 +44,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     if (!token) return;
 
     let ws: WebSocket;
-    let reconnectTimer: NodeJS.Timeout;
+    let reconnectTimer: ReturnType<typeof setTimeout>;
 
     function connect() {
       const wsUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8000";
@@ -245,6 +245,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       )}
                     </div>
                   </motion.div>
+                  </>
                 )}
               </AnimatePresence>
             </div>
