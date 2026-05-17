@@ -231,8 +231,3 @@ make test-frontend
 - [ ] Advanced reporting with exports
 - [ ] Kubernetes deployment manifests
 
----
-
-## 📄 License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file.
