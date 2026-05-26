@@ -168,6 +168,20 @@ class TicketRepository:
         )
         await self.db.flush()
 
+    async def update_search_vector(self, ticket_id: uuid.UUID) -> None:
+        """Update the tsvector for lexical search on a ticket."""
+        await self.db.execute(
+            text(
+                """
+                UPDATE tickets
+                SET search_vector = to_tsvector('english', title || ' ' || description)
+                WHERE id = :id
+                """
+            ),
+            {"id": ticket_id}
+        )
+        await self.db.flush()
+
     # ── Comments ─────────────────────────────────────────────
 
     async def add_comment(self, comment: TicketComment) -> TicketComment:
@@ -191,6 +205,51 @@ class TicketRepository:
         query = query.order_by(TicketComment.created_at.asc())
         result = await self.db.execute(query)
         return list(result.scalars().all())
+
+    async def find_similar_comments(
+        self,
+        embedding: list[float],
+        limit: int = 5,
+        threshold: float = 0.70,
+    ) -> list[tuple[TicketComment, float]]:
+        """Find similar comments using cosine similarity."""
+        distance_expr = TicketComment.embedding.cosine_distance(embedding)
+        similarity_expr = (1 - distance_expr).label("similarity")
+
+        query = (
+            select(TicketComment, similarity_expr)
+            .where(TicketComment.embedding.isnot(None))
+            .where((1 - distance_expr) >= threshold)
+            .order_by(distance_expr.asc())
+            .limit(limit)
+        )
+
+        result = await self.db.execute(query)
+        return [(row[0], float(row[1])) for row in result.all()]
+
+    async def update_comment_embedding(
+        self, comment_id: uuid.UUID, embedding: list[float]
+    ) -> None:
+        await self.db.execute(
+            update(TicketComment)
+            .where(TicketComment.id == comment_id)
+            .values(embedding=embedding)
+        )
+        await self.db.flush()
+
+    async def update_comment_search_vector(self, comment_id: uuid.UUID) -> None:
+        """Update the tsvector for lexical search on a comment."""
+        await self.db.execute(
+            text(
+                """
+                UPDATE ticket_comments
+                SET search_vector = to_tsvector('english', content)
+                WHERE id = :id
+                """
+            ),
+            {"id": comment_id}
+        )
+        await self.db.flush()
 
     # ── Attachments ──────────────────────────────────────────
 

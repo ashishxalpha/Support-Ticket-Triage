@@ -93,7 +93,7 @@ class AIProvider(ABC):
         description: str,
         category: str,
         priority: str,
-        similar_tickets: list[dict[str, Any]] | None = None,
+        similar_tickets: str | None = None,
     ) -> ResponseResult:
         """Generate a draft response for the support ticket."""
         ...

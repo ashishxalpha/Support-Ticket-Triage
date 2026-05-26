@@ -161,31 +161,18 @@ class OpenAIProvider(AIProvider):
         description: str,
         category: str,
         priority: str,
-        similar_tickets: list[dict[str, Any]] | None = None,
+        similar_tickets: str | None = None,
     ) -> ResponseResult:
-        # Build similar tickets context
-        similar_context = ""
+        context_text = ""
         if similar_tickets:
-            ticket_strs = []
-            for t in similar_tickets[:3]:
-                ticket_strs.append(
-                    SIMILAR_TICKET_TEMPLATE.format(
-                        title=t.get("title", ""),
-                        category=t.get("category", ""),
-                        resolution=t.get("resolution", "No resolution recorded"),
-                        similarity=round(t.get("similarity", 0) * 100),
-                    )
-                )
-            similar_context = SIMILAR_CONTEXT_TEMPLATE.format(
-                tickets="\n".join(ticket_strs)
-            )
+            context_text = SIMILAR_CONTEXT_TEMPLATE.format(tickets=similar_tickets)
 
         prompt = RESPONSE_GENERATION_PROMPT.format(
             title=title,
             description=description,
             category=category,
             priority=priority,
-            similar_context=similar_context,
+            similar_context=context_text,
         )
         raw = await self._chat_completion(prompt)
         data = self._parse_json(raw)

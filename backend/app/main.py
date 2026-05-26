@@ -73,6 +73,7 @@ from app.api.v1.teams import router as teams_router
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.health import router as health_router
 from app.api.v1.websocket import router as ws_router
+from app.api.v1.knowledge_base import router as kb_router
 
 API_V1_PREFIX = "/api/v1"
 
@@ -83,3 +84,4 @@ app.include_router(tickets_router, prefix=API_V1_PREFIX)
 app.include_router(teams_router, prefix=API_V1_PREFIX)
 app.include_router(analytics_router, prefix=API_V1_PREFIX)
 app.include_router(ws_router, prefix=API_V1_PREFIX)
+app.include_router(kb_router, prefix=API_V1_PREFIX)

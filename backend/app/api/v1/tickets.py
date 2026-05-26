@@ -137,6 +137,19 @@ async def add_comment(
     """Add a comment to a ticket."""
     service = TicketService(db)
     comment = await service.add_comment(ticket_id, data, current_user)
+
+    # Enqueue comment embedding task
+    try:
+        from app.workers.celery_app import celery_app as _celery
+
+        _celery.send_task(
+            "app.workers.tasks.triage.generate_comment_embedding",
+            args=[str(comment.id)],
+            queue="triage",
+        )
+    except Exception:
+        pass
+
     return CommentResponse.model_validate(comment)
 
 

@@ -24,7 +24,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSON, UUID
+from sqlalchemy.dialects.postgresql import JSON, UUID, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
@@ -152,6 +152,9 @@ class Ticket(BaseModel):
     # Vector embedding for semantic search
     embedding = mapped_column(Vector(1536), nullable=True)
 
+    # Lexical search vector for hybrid search
+    search_vector = mapped_column(TSVECTOR, nullable=True)
+
     # SLA tracking
     first_response_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -218,7 +221,10 @@ class TicketComment(BaseModel):
     """Comment on a ticket — supports internal notes and customer-facing replies."""
 
     __tablename__ = "ticket_comments"
-    __table_args__ = (Index("ix_ticket_comments_ticket_id", "ticket_id"),)
+    __table_args__ = (
+        Index("ix_ticket_comments_ticket_id", "ticket_id"),
+        Index("ix_ticket_comments_search_vector", "search_vector", postgresql_using="gin"),
+    )
 
     ticket_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -233,6 +239,12 @@ class TicketComment(BaseModel):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     is_internal: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_ai_generated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Vector embedding for semantic search
+    embedding = mapped_column(Vector(1536), nullable=True)
+    
+    # Lexical search vector for hybrid search
+    search_vector = mapped_column(TSVECTOR, nullable=True)
 
     # Relationships
     ticket = relationship("Ticket", back_populates="comments")

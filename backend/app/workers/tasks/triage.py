@@ -113,6 +113,80 @@ async def _generate_embedding(ticket_id: str) -> None:
             await session.commit()
 
 
+@shared_task(
+    name="app.workers.tasks.triage.generate_kb_embedding",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=10,
+)
+def generate_kb_embedding_task(self, article_id: str) -> dict:
+    """Generate embedding for a knowledge base article."""
+    logger.info("Generating KB embedding", article_id=article_id)
+    try:
+        _run_async(_generate_kb_embedding(article_id))
+        return {"status": "success", "article_id": article_id}
+    except Exception as exc:
+        logger.error("KB Embedding task failed", article_id=article_id, error=str(exc))
+        raise self.retry(exc=exc)
+
+
+@shared_task(
+    name="app.workers.tasks.triage.generate_comment_embedding",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=10,
+)
+def generate_comment_embedding_task(self, comment_id: str) -> dict:
+    """Generate embedding for a ticket comment."""
+    logger.info("Generating Comment embedding", comment_id=comment_id)
+    try:
+        _run_async(_generate_comment_embedding(comment_id))
+        return {"status": "success", "comment_id": comment_id}
+    except Exception as exc:
+        logger.error("Comment Embedding task failed", comment_id=comment_id, error=str(exc))
+        raise self.retry(exc=exc)
+
+
+async def _generate_kb_embedding(article_id: str) -> None:
+    """Async KB embedding generation."""
+    from app.core.database import async_session_factory
+    from app.ai.factory import get_ai_provider
+    from app.repositories.knowledge_base import KnowledgeBaseRepository
+
+    provider = get_ai_provider()
+    async with async_session_factory() as session:
+        repo = KnowledgeBaseRepository(session)
+        article = await repo.get_by_id(uuid.UUID(article_id))
+        if article:
+            embed_text = f"{article.title}\n\n{article.content}"
+            result = await provider.generate_embedding(embed_text)
+            await repo.update_embedding(article.id, result.embedding)
+            await repo.update_search_vector(article.id)
+            await session.commit()
+
+
+async def _generate_comment_embedding(comment_id: str) -> None:
+    """Async comment embedding generation."""
+    from app.core.database import async_session_factory
+    from app.ai.factory import get_ai_provider
+    from app.repositories.ticket import TicketRepository
+    from sqlalchemy import select
+    from app.models.ticket import TicketComment
+
+    provider = get_ai_provider()
+    async with async_session_factory() as session:
+        result = await session.execute(
+            select(TicketComment).where(TicketComment.id == uuid.UUID(comment_id))
+        )
+        comment = result.scalar_one_or_none()
+        if comment:
+            result_embed = await provider.generate_embedding(comment.content)
+            repo = TicketRepository(session)
+            await repo.update_comment_embedding(comment.id, result_embed.embedding)
+            await repo.update_comment_search_vector(comment.id)
+            await session.commit()
+
+
 async def _notify_triage_complete(ticket_id: str, result: dict) -> None:
     """Send real-time notification after triage completes."""
     try:

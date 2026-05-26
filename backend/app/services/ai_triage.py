@@ -18,6 +18,7 @@ from app.core.logging import get_logger
 from app.models.ticket import TicketCategory, TicketPriority
 from app.repositories.team import TeamRepository
 from app.repositories.ticket import TicketRepository
+from app.services.rag_service import RAGService
 
 logger = get_logger("ai_triage")
 
@@ -129,32 +130,32 @@ class AITriageService:
         except Exception as e:
             logger.error("Embedding generation failed", ticket_id=str(ticket_id), error=str(e))
 
-        # Step 5: Find similar tickets (RAG retrieval)
-        similar_tickets_context: list[dict[str, Any]] = []
+        # Step 5: Find similar tickets and KB articles (RAG retrieval)
+        rag_context_str = None
         if embedding_data:
             try:
-                similar = await self.ticket_repo.find_similar(
-                    embedding=embedding_data,
+                rag_service = RAGService(self.db, self.provider)
+                # Since we already have the embedding, we could pass it, but RAGService currently takes a query string.
+                # The task is to get context, so we'll pass the ticket text.
+                query_text = f"{ticket.title}\n\n{ticket.description}"
+                contexts = await rag_service.retrieve_context(
+                    query=query_text,
                     limit=5,
                     threshold=0.70,
-                    exclude_id=ticket_id,
+                    exclude_ticket_id=ticket_id,
                 )
-                for sim_ticket, score in similar:
-                    similar_tickets_context.append({
-                        "title": sim_ticket.title,
-                        "category": sim_ticket.category.value if sim_ticket.category else "",
-                        "resolution": sim_ticket.ai_response or sim_ticket.description[:200],
-                        "similarity": score,
-                    })
-                results["similar_tickets"] = len(similar_tickets_context)
+                
+                rag_context_str = rag_service.format_context_for_prompt(contexts)
+                results["rag_sources"] = len(contexts)
+                
                 logger.info(
-                    "Similar tickets found",
+                    "RAG context retrieved",
                     ticket_id=str(ticket_id),
-                    count=len(similar_tickets_context),
+                    count=len(contexts),
                 )
             except Exception as e:
                 logger.error(
-                    "Similar ticket search failed",
+                    "RAG retrieval failed",
                     ticket_id=str(ticket_id),
                     error=str(e),
                 )
@@ -168,7 +169,7 @@ class AITriageService:
                 description=ticket.description,
                 category=category_str,
                 priority=priority_str,
-                similar_tickets=similar_tickets_context if similar_tickets_context else None,
+                similar_tickets=rag_context_str,
             )
             results["ai_response"] = response_result.response[:500]
         except Exception as e:

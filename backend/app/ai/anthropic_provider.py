@@ -60,7 +60,7 @@ class AnthropicProvider(AIProvider):
         description: str,
         category: str,
         priority: str,
-        similar_tickets: list[dict[str, Any]] | None = None,
+        similar_tickets: str | None = None,
     ) -> ResponseResult:
         return ResponseResult(response="", confidence=0.0)
 

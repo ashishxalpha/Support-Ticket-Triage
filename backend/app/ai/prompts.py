@@ -103,10 +103,11 @@ Respond with ONLY valid JSON in this exact format:
 }}"""
 
 SIMILAR_CONTEXT_TEMPLATE = """
-SIMILAR PAST TICKETS (for context):
+RETRIEVED CONTEXT (Knowledge Base & Past Tickets):
 {tickets}
 """
 
+# Kept for backward compatibility if needed elsewhere
 SIMILAR_TICKET_TEMPLATE = """
 ---
 Ticket: {title}
