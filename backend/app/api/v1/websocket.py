@@ -22,25 +22,31 @@ class ConnectionManager:
     """Manages active WebSocket connections."""
 
     def __init__(self) -> None:
-        self.active_connections: dict[str, WebSocket] = {}
+        self.active_connections: dict[str, list[WebSocket]] = {}
 
     async def connect(self, user_id: str, websocket: WebSocket) -> None:
         await websocket.accept()
-        self.active_connections[user_id] = websocket
+        if user_id not in self.active_connections:
+            self.active_connections[user_id] = []
+        self.active_connections[user_id].append(websocket)
         logger.info("WebSocket connected", user_id=user_id)
 
-    def disconnect(self, user_id: str) -> None:
-        self.active_connections.pop(user_id, None)
+    def disconnect(self, user_id: str, websocket: WebSocket) -> None:
+        if user_id in self.active_connections:
+            if websocket in self.active_connections[user_id]:
+                self.active_connections[user_id].remove(websocket)
+            if not self.active_connections[user_id]:
+                self.active_connections.pop(user_id, None)
         logger.info("WebSocket disconnected", user_id=user_id)
 
     async def send_to_user(self, user_id: str, data: dict) -> None:
-        ws = self.active_connections.get(user_id)
-        if ws:
-            try:
-                await ws.send_json(data)
-            except Exception:
-                self.disconnect(user_id)
-
+        # We can still keep this for server-side push without pubsub, though we use pubsub.
+        if user_id in self.active_connections:
+            for ws in self.active_connections[user_id]:
+                try:
+                    await ws.send_json(data)
+                except Exception:
+                    pass
 
 manager = ConnectionManager()
 
@@ -76,7 +82,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = "") -> None:
                 if message["type"] == "message":
                     try:
                         data = json.loads(message["data"])
-                        await manager.send_to_user(user_id, data)
+                        await websocket.send_json(data)
                     except Exception:
                         pass
 
@@ -101,4 +107,4 @@ async def websocket_endpoint(websocket: WebSocket, token: str = "") -> None:
             await pubsub.unsubscribe()
             await pubsub.close()
     finally:
-        manager.disconnect(user_id)
+        manager.disconnect(user_id, websocket)
