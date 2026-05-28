@@ -3,9 +3,9 @@ services:
   postgres:
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_USER: support_user
-      POSTGRES_PASSWORD: change_me_in_production
-      POSTGRES_DB: support_triage
+      POSTGRES_USER: ${POSTGRES_USER:-support_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_in_production}
+      POSTGRES_DB: ${POSTGRES_DB:-support_triage}
     ports:
       - "5433:5432"
     volumes:
@@ -37,20 +37,20 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      - APP_ENV=development
-      - APP_DEBUG=true
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=support_user
-      - POSTGRES_PASSWORD=change_me_in_production
-      - POSTGRES_DB=support_triage
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - JWT_SECRET_KEY=dev-secret-key-change-in-production
+      - APP_ENV=${APP_ENV:-development}
+      - APP_DEBUG=${APP_DEBUG:-true}
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-support_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change_me_in_production}
+      - POSTGRES_DB=${POSTGRES_DB:-support_triage}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-secret-key-change-in-production}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-placeholder}
       - AI_PROVIDER=${AI_PROVIDER:-openai}
-      - LOG_FORMAT=console
-      - FRONTEND_URL=http://localhost:5173
+      - LOG_FORMAT=${LOG_FORMAT:-console}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
     ports:
       - "8000:8000"
     depends_on:
@@ -71,17 +71,17 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      - APP_ENV=development
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=support_user
-      - POSTGRES_PASSWORD=change_me_in_production
-      - POSTGRES_DB=support_triage
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - APP_ENV=${APP_ENV:-development}
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-support_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change_me_in_production}
+      - POSTGRES_DB=${POSTGRES_DB:-support_triage}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-placeholder}
       - AI_PROVIDER=${AI_PROVIDER:-openai}
-      - LOG_FORMAT=console
+      - LOG_FORMAT=${LOG_FORMAT:-console}
     depends_on:
       postgres:
         condition: service_healthy
@@ -113,8 +113,8 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:8000
-      - VITE_WS_URL=ws://localhost:8000
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+      - VITE_WS_URL=${VITE_WS_URL:-ws://localhost:8000}
     command: npm run dev -- --host 0.0.0.0
     restart: unless-stopped
 
