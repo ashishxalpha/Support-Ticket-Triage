@@ -4,7 +4,7 @@ import path from "path";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, path.resolve(__dirname, '..'), '');
-  const frontendUrl = env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = env.FRONTEND_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
   
   let allowedHost = undefined;
   try {
