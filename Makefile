@@ -17,13 +17,23 @@ help: ## Show this help
 build: ## Build all containers
 	$(DC) build
 
-up: ## Start all services
+up: network ## Start all services
 	$(DC) up -d
 
 down: ## Stop all services
 	$(DC) down
 
-dev: ## Start in development mode with logs
+# ── Infrastructure Monitoring ────────────────────────────────
+network: ## Create shared docker network for infra
+	docker network create support_network || true
+
+infra-up: network ## Start monitoring infrastructure
+	$(DC) -f infra/docker-compose.yml up -d
+
+infra-down: ## Stop monitoring infrastructure
+	$(DC) -f infra/docker-compose.yml down
+
+dev: network ## Start in development mode with logs
 	$(DC) up --build
 
 logs: ## Tail logs for all services

@@ -61,6 +61,9 @@ services:
     volumes:
       - ./backend:/app
       - upload_data:/app/uploads
+    networks:
+      - default
+      - support_network
     command: >
       bash -c "python -m app.init_db && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     restart: unless-stopped
@@ -134,3 +137,8 @@ volumes:
   postgres_data:
   redis_data:
   upload_data:
+
+networks:
+  support_network:
+    name: support_network
+    external: true

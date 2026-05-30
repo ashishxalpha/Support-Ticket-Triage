@@ -11,6 +11,7 @@ from collections.abc import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import get_settings
 from app.core.database import close_db, init_db
@@ -85,3 +86,6 @@ app.include_router(teams_router, prefix=API_V1_PREFIX)
 app.include_router(analytics_router, prefix=API_V1_PREFIX)
 app.include_router(ws_router, prefix=API_V1_PREFIX)
 app.include_router(kb_router, prefix=API_V1_PREFIX)
+
+# ── Prometheus Monitoring ───────────────────────────────────
+Instrumentator().instrument(app).expose(app)
