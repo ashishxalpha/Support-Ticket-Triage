@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import uuid
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -94,10 +95,19 @@ async def websocket_endpoint(websocket: WebSocket, token: str = "") -> None:
                 # Handle client messages (e.g., subscribe to specific ticket channels)
                 try:
                     msg = json.loads(data)
-                    if msg.get("action") == "subscribe_ticket":
+                    action = msg.get("action")
+                    if action == "subscribe_ticket":
                         ticket_id = msg.get("ticket_id")
                         if ticket_id:
                             await pubsub.subscribe(f"channel:ticket:{ticket_id}")
+                    elif action == "copilot_suggest":
+                        # Real-time copilot suggestion triggered by agent typing
+                        ticket_id = msg.get("ticket_id")
+                        content = msg.get("content", "")
+                        if ticket_id and content:
+                            # In a real app, dispatch to Celery or call AI directly
+                            # For now we'll publish a dummy immediate response to test the pipe
+                            asyncio.create_task(_handle_copilot_suggestion(ticket_id, content))
                 except json.JSONDecodeError:
                     pass
         except WebSocketDisconnect:
@@ -108,3 +118,22 @@ async def websocket_endpoint(websocket: WebSocket, token: str = "") -> None:
             await pubsub.close()
     finally:
         manager.disconnect(user_id, websocket)
+
+async def _handle_copilot_suggestion(ticket_id: str, content: str) -> None:
+    """Handle generating a real-time suggestion."""
+    from app.services.realtime import RealtimeService
+    from app.ai.factory import get_ai_provider
+    provider = get_ai_provider()
+    
+    try:
+        # Ask AI to complete or suggest based on current content
+        prompt = f"The agent is typing: '{content}'. Suggest a polite, helpful completion or next sentence."
+        response = await provider.generate_response(title="Live Typing", description=prompt, category="general", priority="medium", similar_tickets="")
+        
+        await RealtimeService.publish_ticket_update(
+            ticket_id=uuid.UUID(ticket_id),
+            event_type="copilot_suggestion",
+            data={"suggestion": response.response}
+        )
+    except Exception as e:
+        logger.error(f"Copilot suggestion failed: {e}")

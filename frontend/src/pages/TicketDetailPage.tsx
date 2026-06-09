@@ -38,6 +38,49 @@ export function TicketDetailPage() {
   const user = useAuthStore((s) => s.user);
   const [comment, setComment] = useState("");
   const [isInternal, setIsInternal] = useState(false);
+  const [copilotSuggestion, setCopilotSuggestion] = useState<string | null>(null);
+  const [ws, setWs] = useState<WebSocket | null>(null);
+
+  useEffect(() => {
+    if (user?.role === "customer" || !id) return;
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    
+    const wsUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8000";
+    const socket = new WebSocket(`${wsUrl}/api/v1/ws?token=${token}`);
+    
+    socket.onopen = () => {
+      socket.send(JSON.stringify({ action: "subscribe_ticket", ticket_id: id }));
+    };
+    
+    socket.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === "copilot_suggestion") {
+          setCopilotSuggestion(msg.data?.suggestion);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    
+    setWs(socket);
+    return () => socket.close();
+  }, [id, user]);
+
+  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setComment(val);
+    
+    // Trigger suggestion when user pauses after typing a word (ends with space)
+    if (ws && val.length > 5 && val.endsWith(" ")) {
+      ws.send(JSON.stringify({
+        action: "copilot_suggest",
+        ticket_id: id,
+        content: val
+      }));
+    }
+  };
 
   const { data: ticket, isLoading } = useQuery({
     queryKey: ["ticket", id],
@@ -208,13 +251,28 @@ export function TicketDetailPage() {
 
             {/* Add Comment */}
             <div className="mt-4 border-t border-border pt-4">
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Add a comment..."
-                rows={3}
-                className="w-full rounded-lg border border-input bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
-              />
+              <div className="relative">
+                <textarea
+                  value={comment}
+                  onChange={handleCommentChange}
+                  placeholder="Add a comment..."
+                  rows={3}
+                  className="w-full rounded-lg border border-input bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
+                />
+                {copilotSuggestion && (
+                  <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                    className="absolute bottom-full left-0 mb-2 w-full rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-foreground shadow-sm backdrop-blur-sm"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                        <Sparkles className="h-3.5 w-3.5" /> Copilot Suggestion
+                      </span>
+                      <button onClick={() => { setComment(comment + copilotSuggestion.replace(comment.trim(), "").trim()); setCopilotSuggestion(null); }} className="text-xs font-medium text-primary hover:underline">Accept</button>
+                    </div>
+                    <p className="text-muted-foreground">{copilotSuggestion}</p>
+                  </motion.div>
+                )}
+              </div>
               <div className="mt-2 flex items-center justify-between">
                 {user?.role !== "customer" && (
                   <label className="flex items-center gap-2 text-xs text-muted-foreground">

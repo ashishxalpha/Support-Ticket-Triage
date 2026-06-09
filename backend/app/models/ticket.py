@@ -149,6 +149,11 @@ class Ticket(BaseModel):
     ai_response: Mapped[str | None] = mapped_column(Text, nullable=True)
     ai_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
 
+    # QA and continuous learning
+    qa_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    qa_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sentiment_history: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+
     # Vector embedding for semantic search
     embedding = mapped_column(Vector(1536), nullable=True)
 

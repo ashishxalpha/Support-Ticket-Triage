@@ -8,8 +8,11 @@ import { Send, Loader2 } from "lucide-react";
 import { ticketService } from "@/services/tickets";
 import { toast } from "sonner";
 
+import { DeflectionChat } from "@/components/DeflectionChat";
+
 export function CreateTicketPage() {
   const navigate = useNavigate();
+  const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("medium");
@@ -38,6 +41,17 @@ export function CreateTicketPage() {
       mutation.mutate();
     }
   };
+
+  if (!showForm) {
+    return (
+      <div className="mx-auto max-w-2xl py-8">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="mb-6 text-2xl font-bold text-foreground">Need Help?</h1>
+          <DeflectionChat onBypass={() => setShowForm(true)} />
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-2xl">
