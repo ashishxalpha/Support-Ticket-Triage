@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Request, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.core.database import get_db
+from app.core.database import get_db_session
 from app.models.user import User, UserRole
 from app.models.ticket import Ticket
 from app.repositories.ticket import TicketRepository
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 @router.post("/email/inbound")
 async def inbound_email_webhook(
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_session),
 ) -> dict[str, Any]:
     """
     Receive inbound emails parsed by an external service (e.g., SendGrid/Mailgun).
